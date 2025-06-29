@@ -34,14 +34,16 @@ function renderizarTablero() {
 
         const piece = boardString[i];
         if (piece !== '.') {
-            let pieceSymbol = '';
+            const pieceDiv = document.createElement('div');
+            pieceDiv.classList.add('pieza');
+
             switch (piece) {
-                case 'B': pieceSymbol = '⚪'; break;
-                case 'N': pieceSymbol = '⚫'; break;
-                case 'X': pieceSymbol = '👑'; break;
-                case 'Y': pieceSymbol = '♛'; break;
+                case 'B': pieceDiv.classList.add('blanca'); break;
+                case 'N': pieceDiv.classList.add('negra'); break;
+                case 'X': pieceDiv.classList.add('reina-blanca'); break;
+                case 'Y': pieceDiv.classList.add('reina-negra'); break;
             }
-            square.textContent = pieceSymbol;
+            square.appendChild(pieceDiv);
         }
         
         if ((row + col) % 2 === 1) {
