@@ -49,3 +49,16 @@ button:disabled {
     background-color: #333;
     cursor: not-allowed;
 }
+pieza {
+    width: 90%; /* Ocupa el 90% del tamaño de la casilla */
+    height: 90%;
+    background-size: contain; /* Asegura que la imagen quepa completa */
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+/* Asignamos la imagen a cada clase */
+.pieza.blanca { background-image: url('pieza-blanca.svg'); }
+.pieza.negra  { background-image: url('pieza-negra.svg'); }
+.pieza.reina-blanca { background-image: url('reina-blanca.svg'); }
+.pieza.reina-negra  { background-image: url('reina-negra.svg'); }
