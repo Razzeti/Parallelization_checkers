@@ -58,7 +58,7 @@ button:disabled {
 }
 
 /* Asignamos la imagen a cada clase */
-.pieza.blanca { background-image: url('pieza-blanca.svg'); }
-.pieza.negra  { background-image: url('pieza-negra.svg'); }
-.pieza.reina-blanca { background-image: url('reina-blanca.svg'); }
-.pieza.reina-negra  { background-image: url('reina-negra.svg'); }
+.pieza.blanca { background-image: url('imagenes/pieza-blanca.svg'); }
+.pieza.negra  { background-image: url('imagenes/pieza-negra.svg'); }
+.pieza.reina-blanca { background-image: url('imagenes/reina-blanca.svg'); }
+.pieza.reina-negra  { background-image: url('imagenes/reina-negra.svg'); }
