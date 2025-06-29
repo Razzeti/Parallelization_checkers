@@ -99,7 +99,9 @@ public:
                 char pieza = tablero[i][j];
                 bool es_reina = (pieza == REINA_B || pieza == REINA_N);
 
-                if (toupper(pieza) != toupper(jugador)) continue;
+                if (!(pieza == jugador || (es_reina && toupper(pieza) == toupper(jugador)))) {
+                    continue;
+                }
 
                 for (int di = -2; di <= 2; di += 4) {
                     for (int dj = -2; dj <= 2; dj += 4) {
@@ -149,10 +151,19 @@ public:
     bool realizarMovimiento(const string& mov) {
         if (mov.length() < 5) return false;
 
-        int y1 = toupper(mov[0]) - 'A';
-        int x1 = TAM_TABLERO - stoi(mov.substr(1, mov.find(' ')));
-        int y2 = toupper(mov[mov.find(' ') + 1]) - 'A';
-        int x2 = TAM_TABLERO - stoi(mov.substr(mov.find(' ') + 2));
+        //amplicacion de robustez
+        size_t espacio_pos = mov.find(' ');
+        if (espacio_pos == string::npos) return false; // No se encontró espacio
+        
+        string origen_str = mov.substr(0, espacio_pos);
+        string destino_str = mov.substr(espacio_pos + 1);
+        
+        if (origen_str.length() < 2 || destino_str.length() < 2) return false; // Formato inválido
+        
+        int y1 = toupper(origen_str[0]) - 'A';
+        int x1 = TAM_TABLERO - stoi(origen_str.substr(1));
+        int y2 = toupper(destino_str[0]) - 'A';
+        int x2 = TAM_TABLERO - stoi(destino_str.substr(1));
 
         char pieza = tablero[x1][y1];
         tablero[x2][y2] = pieza;
