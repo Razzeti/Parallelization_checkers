@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <cctype>   
 #include <chrono>    
-#include <omp.h>
+//#include <omp.h>
 
 using namespace std;
 
