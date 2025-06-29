@@ -3,10 +3,25 @@ body {
     display: flex; 
     justify-content: center; 
     align-items: center; 
-    flex-direction: column; 
-    background-color: #312e2b;
-    color: #eee;
+    min-height: 100vh;
+    margin: 0;
+    /* CAMBIO: Fondo negro */
+    background-color: #121212; 
+    color: #e0e0e0;
 }
+/*Estadisticas*/
+#gameContainer {
+    display: flex;
+    align-items: flex-start;
+    gap: 30px;
+}
+#board { 
+    display: grid; 
+    grid-template-columns: repeat(10, 50px); 
+    grid-template-rows: repeat(10, 50px); 
+    border: 2px solid #444; 
+}
+
 #board { 
     display: grid; 
     grid-template-columns: repeat(10, 50px); 
@@ -62,3 +77,27 @@ button:disabled {
 .pieza.negra  { background-image: url('imagenes/pieza-negra.svg'); }
 .pieza.reina-blanca { background-image: url('imagenes/reina-blanca.svg'); }
 .pieza.reina-negra  { background-image: url('imagenes/reina-negra.svg'); }
+
+#statsBar {
+    width: 250px;
+    padding: 20px;
+    background-color: #1e1e1e;
+    border: 1px solid #444;
+    border-radius: 8px;
+}
+#statsBar h2 {
+    margin-top: 0;
+    border-bottom: 2px solid #00aaff;
+    padding-bottom: 10px;
+    text-align: center;
+}
+.stat-item {
+    margin-bottom: 15px;
+    font-size: 1.1em;
+}
+.stat-item strong {
+    color: #00aaff;
+}
+#status { 
+    font-weight: bold; 
+}

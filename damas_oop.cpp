@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cctype>   
 #include <chrono>    
+#include <omp.h>
 
 using namespace std;
 
@@ -20,6 +21,9 @@ private:
     vector<vector<char>> tablero;
     int movimientos_sin_captura;
     char jugador_actual;
+
+    double ultimo_tiempo_ia_ms;
+    int hilos_usados;
 
     int evaluarPosicion() {
         int puntuacion = 0;
@@ -42,7 +46,9 @@ public:
         tablero.resize(TAM_TABLERO, vector<char>(TAM_TABLERO, VACIO));
         inicializarTablero();
         movimientos_sin_captura = 0;
-        jugador_actual = JUGADOR_B; 
+        jugador_actual = JUGADOR_B;
+        ultimo_tiempo_ia_ms = 0.0;
+        hilos_usados = 0; // Se establecerá al llamar a la IA
     }
 
     void inicializarTablero() {
@@ -170,38 +176,79 @@ public:
         auto inicio = chrono::high_resolution_clock::now();
 
         vector<string> movimientos = getMovimientosLegales();
-        if (movimientos.empty()) return "";
+        if (movimientos.empty()) {
+            this->ultimo_tiempo_ia_ms = 0;
+            this->hilos_usados = 1;
+            return "";
+        }
 
-        string mejor_movimiento = "";
-        int mejor_puntuacion = (jugador_actual == JUGADOR_B) ? -9999 : 9999;
+        string mejor_movimiento_global = movimientos[0]; // Empezar con una opción por defecto
+        int mejor_puntuacion_global = (jugador_actual == JUGADOR_B) ? -99999 : 99999;
 
-        for (const string& mov : movimientos) {
-            JuegoDamas copia_juego = *this;
-            copia_juego.realizarMovimiento(mov);
+        // 3. Iniciamos la región paralela. Todo lo que está dentro de {} será ejecutado por un equipo de hilos.
+        #pragma omp parallel
+        {
+            // 4. CADA HILO crea sus propias variables locales para no entrar en conflicto con los demás.
+            string mejor_movimiento_local = mejor_movimiento_global;
+            int mejor_puntuacion_local = mejor_puntuacion_global;
 
-            int puntuacion_actual = copia_juego.evaluarPosicion();
+            // 5. El bucle 'for' se distribuye entre los hilos. Cada hilo coge un subconjunto de movimientos.
+            #pragma omp for
+            for (int i = 0; i < movimientos.size(); ++i) {
+                const string& mov = movimientos[i];
 
-            if (jugador_actual == JUGADOR_B) { 
-                if (puntuacion_actual > mejor_puntuacion) {
-                    mejor_puntuacion = puntuacion_actual;
-                    mejor_movimiento = mov;
+                // ---- Este es el "corazón" de tu lógica, ejecutándose en paralelo ----
+                JuegoDamas copia_juego = *this;
+                copia_juego.realizarMovimiento(mov);
+                int puntuacion_actual = copia_juego.evaluarPosicion();
+                // --------------------------------------------------------------------
+
+                // Cada hilo compara y actualiza SU PROPIO mejor movimiento local
+                if (jugador_actual == JUGADOR_B) {
+                    if (puntuacion_actual > mejor_puntuacion_local) {
+                        mejor_puntuacion_local = puntuacion_actual;
+                        mejor_movimiento_local = mov;
+                    }
+                } else {
+                    if (puntuacion_actual < mejor_puntuacion_local) {
+                        mejor_puntuacion_local = puntuacion_actual;
+                        mejor_movimiento_local = mov;
+                    }
                 }
-            } else { 
-                if (puntuacion_actual < mejor_puntuacion) {
-                    mejor_puntuacion = puntuacion_actual;
-                    mejor_movimiento = mov;
+            } // <-- Aquí termina el trabajo de cada hilo
+
+            // 6. SINCRONIZACIÓN FINAL (Reducción)
+            // Cada hilo entra aquí uno por uno para comparar su mejor hallazgo local con el mejor global.
+            #pragma omp critical
+            {
+                if (jugador_actual == JUGADOR_B) {
+                    if (mejor_puntuacion_local > mejor_puntuacion_global) {
+                        mejor_puntuacion_global = mejor_puntuacion_local;
+                        mejor_movimiento_global = mejor_movimiento_local;
+                    }
+                } else {
+                    if (mejor_puntuacion_local < mejor_puntuacion_global) {
+                        mejor_puntuacion_global = mejor_puntuacion_local;
+                        mejor_movimiento_global = mejor_movimiento_local;
+                    }
                 }
             }
-        }
+            
+            // Un solo hilo (single) se encarga de actualizar el conteo de hilos usados.
+            #pragma omp single
+            {
+                this->hilos_usados = omp_get_num_threads();
+            }
+        } // <-- Aquí termina la región paralela
 
         auto fin = chrono::high_resolution_clock::now();
         chrono::duration<double, milli> duracion = fin - inicio;
-        cout << "IA pensó por " << duracion.count() << " ms." << endl;
 
-        return mejor_movimiento;
-    }
+        // Guardamos las estadísticas en las variables de la clase
+        this->ultimo_tiempo_ia_ms = duracion.count();
 
-    char getJugadorActual() const { return jugador_actual; }
+        // 7. Devolvemos el mejor movimiento encontrado entre todos los hilos.
+        return mejor_movimiento_global;
 };
 
 
@@ -228,6 +275,13 @@ extern "C" {
         static string mov_ia;
         mov_ia = juego->getMovimientoAI();
         return mov_ia.c_str();
+    }
+    double get_last_ai_time(JuegoDamas* juego) {
+        return juego->getUltimoTiempoIA();
+    }
+
+    int get_thread_count(JuegoDamas* juego) {
+        return juego->getHilosUsados();
     }
 }
 

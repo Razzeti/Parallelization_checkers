@@ -1,20 +1,24 @@
 const boardDiv = document.getElementById('board');
-const statusDiv = document.getElementById('status');
-const aiMoveBtn = document.getElementById('aiMoveBtn');
+const statusSpan = document.getElementById('status');
+const statThreadsSpan = document.getElementById('stat-threads');
+const statTimeSpan = document.getElementById('stat-time');
+
 let gamePtr = null;
 let fromSquare = null;
 
-let crearJuego, getTablero, realizarMovimiento, getMovimientoIA;
+let crearJuego, getTablero, realizarMovimiento, getMovimientoIA, getLastAITime, getThreadCount;
 
 Module.onRuntimeInitialized = () => {
+    // Envolvemos las funciones C++, incluyendo las nuevas para las stats
     crearJuego = Module.cwrap('crear_juego', 'number', []);
     getTablero = Module.cwrap('get_tablero', 'string', ['number']);
     realizarMovimiento = Module.cwrap('realizar_movimiento', 'boolean', ['number', 'string']);
     getMovimientoIA = Module.cwrap('get_movimiento_ia', 'string', ['number']);
+    getLastAITime = Module.cwrap('get_last_ai_time', 'number', ['number']);
+    getThreadCount = Module.cwrap('get_thread_count', 'number', ['number']);
 
     gamePtr = crearJuego();
-    statusDiv.textContent = 'Turno de Blancas (B). Haz tu movimiento.';
-    aiMoveBtn.disabled = true;
+    statusSpan.textContent = 'Turno de Blancas (B).';
     renderizarTablero();
 };
 
@@ -65,14 +69,29 @@ function onSquareClick(row, col) {
         const toRowChar = 10 - row;
         const moveStr = `${fromColChar}${fromRowChar} ${toColChar}${toRowChar}`;
         
-        realizarMovimiento(gamePtr, moveStr);
-        
-        fromSquare = null;
+        realizarMovimiento(gamePtr, moveStr); // Realiza el movimiento humano
         renderizarTablero();
         
-        statusDiv.textContent = 'Turno de Negras (IA)...';
-        aiMoveBtn.disabled = false;
+        statusSpan.textContent = 'IA está pensando...';
+
+        setTimeout(triggerAIMove, 50);
     }
+}
+
+function triggerAIMove() {
+    const aiMove = getMovimientoIA(gamePtr); // Llama a C++ para obtener el movimiento
+    
+    // Obtiene las estadísticas DESPUÉS de que la IA ha pensado
+    const aiTime = getLastAITime(gamePtr);
+    const threadCount = getThreadCount(gamePtr);
+    
+    // Actualiza la barra de estadísticas
+    statTimeSpan.textContent = `${aiTime.toFixed(2)} ms`;
+    statThreadsSpan.textContent = threadCount;
+    
+    realizarMovimiento(gamePtr, aiMove); // Realiza el movimiento de la IA
+    statusSpan.textContent = `Turno de Blancas (B).`;
+    renderizarTablero();
 }
 
 aiMoveBtn.addEventListener('click', () => {
