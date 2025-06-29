@@ -183,46 +183,51 @@ public:
         return true;
     }
 
-string getMovimientoAI() {
-    auto inicio = chrono::high_resolution_clock::now();
-
-    vector<string> movimientos = getMovimientosLegales();
-    if (movimientos.empty()) {
-        this->ultimo_tiempo_ia_ms = 0;
-        this->hilos_usados = 1; // Solo usamos 1 hilo en modo secuencial
-        return "";
-    }
-
-    string mejor_movimiento = movimientos[0];
-    int mejor_puntuacion = (jugador_actual == JUGADOR_B) ? -99999 : 99999;
-
-    // BUCLE SECUENCIAL SIMPLE: Recorremos todos los movimientos uno por uno.
-    for (const string& mov : movimientos) {
-        JuegoDamas copia_juego = *this;
-        copia_juego.realizarMovimiento(mov);
-        int puntuacion_actual = copia_juego.evaluarPosicion();
-
-        if (jugador_actual == JUGADOR_B) {
-            if (puntuacion_actual > mejor_puntuacion) {
-                mejor_puntuacion = puntuacion_actual;
-                mejor_movimiento = mov;
-            }
-        } else {
-            if (puntuacion_actual < mejor_puntuacion) {
-                mejor_puntuacion = puntuacion_actual;
-                mejor_movimiento = mov;
+    string getMovimientoAI() {
+        auto inicio = chrono::high_resolution_clock::now();
+    
+        vector<string> movimientos = getMovimientosLegales();
+        if (movimientos.empty()) {
+            this->ultimo_tiempo_ia_ms = 0;
+            this->hilos_usados = 1; // Solo usamos 1 hilo en modo secuencial
+            return "";
+        }
+    
+        string mejor_movimiento = movimientos[0];
+        int mejor_puntuacion = (jugador_actual == JUGADOR_B) ? -99999 : 99999;
+    
+        // BUCLE SECUENCIAL SIMPLE: Recorremos todos los movimientos uno por uno.
+        for (const string& mov : movimientos) {
+            JuegoDamas copia_juego = *this;
+            copia_juego.realizarMovimiento(mov);
+            int puntuacion_actual = copia_juego.evaluarPosicion();
+    
+            if (jugador_actual == JUGADOR_B) {
+                if (puntuacion_actual > mejor_puntuacion) {
+                    mejor_puntuacion = puntuacion_actual;
+                    mejor_movimiento = mov;
+                }
+            } else {
+                if (puntuacion_actual < mejor_puntuacion) {
+                    mejor_puntuacion = puntuacion_actual;
+                    mejor_movimiento = mov;
+                }
             }
         }
+    
+        auto fin = chrono::high_resolution_clock::now();
+        chrono::duration<double, milli> duracion = fin - inicio;
+    
+        this->ultimo_tiempo_ia_ms = duracion.count();
+        this->hilos_usados = 1; // Siempre será 1 en esta versión.
+    
+        return mejor_movimiento;
     }
+    double getUltimoTiempoIA() const { return ultimo_tiempo_ia_ms; }
+    int getHilosUsados() const { return hilos_usados; }
+    char getJugadorActual() const { return jugador_actual; }
 
-    auto fin = chrono::high_resolution_clock::now();
-    chrono::duration<double, milli> duracion = fin - inicio;
-
-    this->ultimo_tiempo_ia_ms = duracion.count();
-    this->hilos_usados = 1; // Siempre será 1 en esta versión.
-
-    return mejor_movimiento;
-}
+};
 
 
 extern "C" {
