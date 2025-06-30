@@ -23,7 +23,7 @@ private:
     vector<vector<char>> tablero;
     int movimientos_sin_captura;
     char jugador_actual;
-    double ultimo_tiempo_ia_ms;
+    long long ultimo_tiempo_ia_ns;
     int hilos_usados;
 
     int evaluarPosicion() {
@@ -47,7 +47,7 @@ public:
         inicializarTablero();
         movimientos_sin_captura = 0;
         jugador_actual = JUGADOR_B;
-        ultimo_tiempo_ia_ms = 0.0;
+        ultimo_tiempo_ia_ns = 0
         hilos_usados = 1; 
     }
 
@@ -208,13 +208,13 @@ public:
             }
         }
         auto fin = chrono::high_resolution_clock::now();
-        chrono::duration<double, milli> duracion = fin - inicio;
-        this->ultimo_tiempo_ia_ms = duracion.count();
+        auto duracion_ns = chrono::duration_cast<chrono::nanoseconds>(fin - inicio);
+        this->ultimo_tiempo_ia_ns = duracion_ns.count();
         this->hilos_usados = 1;
         return mejor_movimiento;
     }
     
-    double getUltimoTiempoIA() const { return ultimo_tiempo_ia_ms; }
+    double getUltimoTiempoIA() const { return ultimo_tiempo_ia_ns; }
     int getHilosUsados() const { return hilos_usados; }
     char getJugadorActual() const { return jugador_actual; }
 
@@ -237,8 +237,8 @@ extern "C" {
         mov_ia = juego->getMovimientoAI();
         return mov_ia.c_str();
     }
-    double get_last_ai_time(JuegoDamas* juego) {
-        return juego->getUltimoTiempoIA();
+    long long get_last_ai_ns(JuegoDamas* juego) {
+        return juego->getUltimoTiempoIANS();
     }
     int get_thread_count(JuegoDamas* juego) {
         return juego->getHilosUsados();

@@ -14,7 +14,7 @@ Module.onRuntimeInitialized = () => {
     getTablero = Module.cwrap('get_tablero', 'string', ['number']);
     realizarMovimiento = Module.cwrap('realizar_movimiento', 'boolean', ['number', 'string']);
     getMovimientoIA = Module.cwrap('get_movimiento_ia', 'string', ['number']);
-    getLastAITime = Module.cwrap('get_last_ai_time', 'number', ['number']);
+    getLastAITimeNS = Module.cwrap('get_last_ai_ns', 'number', ['number']);
     getThreadCount = Module.cwrap('get_thread_count', 'number', ['number']);
     getMovimientosLegalesStr = Module.cwrap('get_movimientos_legales_str', 'string', ['number']);
 
@@ -97,9 +97,9 @@ function triggerAIMove() {
         return;
     }
 
-    const aiTime = getLastAITime(gamePtr);
+    const aiTime = getLastAITimeNS(gamePtr);
     const threadCount = getThreadCount(gamePtr);
-    statTimeSpan.textContent = `${aiTime.toFixed(2)} ms`;
+    statTimeSpan.textContent = `${aiTime} ns`;
     statThreadsSpan.textContent = threadCount;
     
     realizarMovimiento(gamePtr, aiMove);
