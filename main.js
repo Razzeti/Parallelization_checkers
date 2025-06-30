@@ -10,14 +10,12 @@ let fromSquare = null;
 let crearJuego, getTablero, realizarMovimiento, getMovimientoIA, getLastAITime, getThreadCount, getMovimientosLegalesStr;
 
 Module.onRuntimeInitialized = () => {
-    // Envolvemos las funciones C++, incluyendo la nueva de validación
     crearJuego = Module.cwrap('crear_juego', 'number', []);
     getTablero = Module.cwrap('get_tablero', 'string', ['number']);
     realizarMovimiento = Module.cwrap('realizar_movimiento', 'boolean', ['number', 'string']);
     getMovimientoIA = Module.cwrap('get_movimiento_ia', 'string', ['number']);
     getLastAITime = Module.cwrap('get_last_ai_time', 'number', ['number']);
     getThreadCount = Module.cwrap('get_thread_count', 'number', ['number']);
-    // NUEVO: Envolvemos la función de validación
     getMovimientosLegalesStr = Module.cwrap('get_movimientos_legales_str', 'string', ['number']);
 
     gamePtr = crearJuego();
@@ -26,7 +24,6 @@ Module.onRuntimeInitialized = () => {
 };
 
 function renderizarTablero() {
-    // ... (Esta función no necesita cambios, es correcta)
     if (!gamePtr) return;
     const boardString = getTablero(gamePtr);
     boardDiv.innerHTML = '';
@@ -60,30 +57,52 @@ function renderizarTablero() {
     }
 }
 
-// ==========================================================
-// AQUI ESTÁ LA LÓGICA CORREGIDA
-// ==========================================================
 function onSquareClick(row, col) {
     if (fromSquare === null) {
-        // PRIMER CLIC: Solo seleccionamos si hay una pieza nuestra.
         const boardString = getTablero(gamePtr);
         const piece = boardString[row * 10 + col];
-        if (piece === 'B' || piece === 'X') { // Asumiendo que el humano es Blancas (B)
+        if (piece === 'B' || piece === 'X') { 
             fromSquare = { row, col };
             document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
             document.querySelector(`[data-row='${row}'][data-col='${col}']`).classList.add('selected');
         }
     } else {
-        // SEGUNDO CLIC: Construimos y VALIDAMOS el movimiento.
         const fromColChar = String.fromCharCode('A'.charCodeAt(0) + fromSquare.col);
         const fromRowChar = 10 - fromSquare.row;
         const toColChar = String.fromCharCode('A'.charCodeAt(0) + col);
         const toRowChar = 10 - row;
         const moveStr = `${fromColChar}${fromRowChar} ${toColChar}${toRowChar}`;
 
-        // Obtenemos la lista de movimientos legales desde C++
         const legalMovesStr = getMovimientosLegalesStr(gamePtr);
         const legalMoves = legalMovesStr.split('|');
 
-        // VALIDACIÓN: ¿Está nuestro movimiento en la lista de movimientos legales?
-        if
+        if (legalMoves.includes(moveStr)) {
+            realizarMovimiento(gamePtr, moveStr);
+            renderizarTablero();
+            statusSpan.textContent = 'IA está pensando...';
+            setTimeout(triggerAIMove, 50);
+        } else {
+            statusSpan.textContent = 'Movimiento ilegal. Inténtalo de nuevo.';
+            document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+        }
+        
+        fromSquare = null;
+    }
+}
+
+function triggerAIMove() {
+    const aiMove = getMovimientoIA(gamePtr);
+    if (aiMove === "") {
+        statusSpan.textContent = '¡GANASTE! La IA no tiene movimientos.';
+        return;
+    }
+
+    const aiTime = getLastAITime(gamePtr);
+    const threadCount = getThreadCount(gamePtr);
+    statTimeSpan.textContent = `${aiTime.toFixed(2)} ms`;
+    statThreadsSpan.textContent = threadCount;
+    
+    realizarMovimiento(gamePtr, aiMove);
+    statusSpan.textContent = `Turno de Blancas (B).`;
+    renderizarTablero();
+}
