@@ -23,7 +23,7 @@ private:
     vector<vector<char>> tablero;
     int movimientos_sin_captura;
     char jugador_actual;
-    long long ns;
+    long long ultimo_tiempo_ia_ns;;
     int hilos_usados;
 
     int evaluarPosicion() {
@@ -47,7 +47,7 @@ public:
         inicializarTablero();
         movimientos_sin_captura = 0;
         jugador_actual = JUGADOR_B;
-        ns = 0;
+        ultimo_tiempo_ia_ns; = 0;
         hilos_usados = 1; 
     }
 
@@ -209,12 +209,12 @@ public:
         }
         auto fin = chrono::high_resolution_clock::now();
         auto duracion_ns = chrono::duration_cast<chrono::nanoseconds>(fin - inicio);
-        this->ns = duracion_ns.count();
+        this->ultimo_tiempo_ia_ns; = duracion_ns.count();
         this->hilos_usados = 1;
         return mejor_movimiento;
     }
     
-    double getUltimoTiempoIA() const { return ns; }
+    double getUltimoTiempoIA() const { return ultimo_tiempo_ia_ns;; }
     int getHilosUsados() const { return hilos_usados; }
     char getJugadorActual() const { return jugador_actual; }
 
