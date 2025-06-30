@@ -253,6 +253,10 @@ extern "C" {
 // FUNCIÓN MAIN PARA PRUEBAS EN CONSOLA
 // ¡RECUERDA COMENTAR O ELIMINAR ESTE BLOQUE ANTES DE COMPILAR A WEBASSEMBLY!
 // ==============================================================================
+// ==============================================================================
+// FUNCIÓN MAIN PARA PRUEBAS EN CONSOLA (VERSIÓN QUE MUESTRA EL TIEMPO DE LA IA)
+// ¡RECUERDA COMENTAR O ELIMINAR ESTE BLOQUE ANTES DE COMPILAR A WEBASSEMBLY!
+// ==============================================================================
 int main() {
     JuegoDamas juego;
     string mov_humano;
@@ -261,36 +265,31 @@ int main() {
     while (true) {
         juego.imprimirTablero(); // Muestra el estado actual del tablero
 
-        // Obtiene los movimientos legales para el jugador actual
         vector<string> movimientos = juego.getMovimientosLegales();
 
-        // Comprueba si hay fin de juego (un jugador no tiene movimientos)
         if (movimientos.empty()) {
             cout << "\n===================================" << endl;
             cout << "JUEGO TERMINADO." << endl;
-            // Determina el ganador
             if (juego.getJugadorActual() == JUGADOR_B) {
                 cout << "¡Ganan las Negras! Las Blancas no tienen movimientos." << endl;
             } else {
                 cout << "¡Ganan las Blancas! Las Negras no tienen movimientos." << endl;
             }
             cout << "===================================" << endl;
-            break; // Rompe el bucle principal
+            break;
         }
 
         string mov_elegido;
         // Turno del Jugador Humano (Blancas)
         if (juego.getJugadorActual() == JUGADOR_B) {
             
-            // Bucle para validar la entrada del humano
             while(true) {
                 cout << "\nTu turno. Introduce el movimiento (ej: C3 D4): ";
                 getline(cin, mov_humano);
 
-                // Comprueba si el movimiento introducido está en la lista de movimientos legales
                 if (find(movimientos.begin(), movimientos.end(), mov_humano) != movimientos.end()) {
                     mov_elegido = mov_humano;
-                    break; // El movimiento es válido, salimos del bucle de validación
+                    break;
                 } else {
                     cout << "--> Movimiento '" << mov_humano << "' no es legal. Inténtalo de nuevo." << endl;
                 }
@@ -299,12 +298,21 @@ int main() {
         } 
         // Turno de la IA (Negras)
         else { 
-            cout << "\nTurno de la IA (Negras)..." << endl;
+            cout << "\nTurno de la IA (Negras)... pensando..." << endl;
+            
+            // La IA decide su movimiento. El tiempo se calcula y guarda internamente.
             mov_elegido = juego.getMovimientoAI();
+            
+            // ==========================================================
+            // ¡NUEVO! Obtenemos y mostramos el tiempo de respuesta.
+            // ==========================================================
+            long long tiempo_ns = juego.getUltimoTiempoIANS(); // Usamos la función de nanosegundos
             cout << "La IA mueve: " << mov_elegido << endl;
+            cout << "Tiempo de respuesta de la IA: " << tiempo_ns << " ns (" << (double)tiempo_ns / 1000000.0 << " ms)" << endl;
+            
         }
         
-        // Realiza el movimiento elegido (sea del humano o de la IA)
+        // Se realiza el movimiento en el tablero.
         juego.realizarMovimiento(mov_elegido);
     }
 
