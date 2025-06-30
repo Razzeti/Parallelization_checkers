@@ -47,7 +47,7 @@ public:
         inicializarTablero();
         movimientos_sin_captura = 0;
         jugador_actual = JUGADOR_B;
-        ultimo_tiempo_ia_ns = 0
+        ultimo_tiempo_ia_ns = 0;
         hilos_usados = 1; 
     }
 
