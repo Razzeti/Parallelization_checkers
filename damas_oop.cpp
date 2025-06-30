@@ -231,24 +231,16 @@ public:
 
 
 extern "C" {
-    JuegoDamas* crear_juego() {
-        return new JuegoDamas();
-    }
-
-    void destruir_juego(JuegoDamas* juego) {
-        delete juego;
-    }
-
+    JuegoDamas* crear_juego() { return new JuegoDamas(); }
+    void destruir_juego(JuegoDamas* juego) { delete juego; }
     const char* get_tablero(JuegoDamas* juego) {
         static string tablero_str;
         tablero_str = juego->getTableroString();
         return tablero_str.c_str();
     }
-
     bool realizar_movimiento(JuegoDamas* juego, const char* mov) {
         return juego->realizarMovimiento(string(mov));
     }
-
     const char* get_movimiento_ia(JuegoDamas* juego) {
         static string mov_ia;
         mov_ia = juego->getMovimientoAI();
@@ -257,9 +249,15 @@ extern "C" {
     double get_last_ai_time(JuegoDamas* juego) {
         return juego->getUltimoTiempoIA();
     }
-
     int get_thread_count(JuegoDamas* juego) {
         return juego->getHilosUsados();
+    }
+    
+    // --> FUNCIÓN "MENSAJERO" QUE DEBE ESTAR AQUÍ
+    const char* get_movimientos_legales_str(JuegoDamas* juego) {
+        static string movs_str;
+        movs_str = juego->getMovimientosLegalesComoString();
+        return movs_str.c_str();
     }
 }
 
