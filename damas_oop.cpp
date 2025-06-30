@@ -1,3 +1,5 @@
+%%writefile damas_oop.cpp
+
 #include <iostream>
 #include <vector>
 #include <string>
@@ -5,7 +7,7 @@
 #include <algorithm>
 #include <cctype>   
 #include <chrono>   
-// #include <omp.h> // Correctamente comentado para la compilación secuencial
+// #include <omp.h>
 
 using namespace std;
 
@@ -74,6 +76,22 @@ public:
         }
         return s;
     }
+    
+    // --> FUNCIÓN RESTAURADA, por si se necesita para depurar
+    void imprimirTablero() const {
+        cout << "\n   A B C D E F G H I J" << endl;
+        cout << "  ---------------------" << endl;
+        for (int i = 0; i < TAM_TABLERO; ++i) {
+            cout << (TAM_TABLERO - i) << (TAM_TABLERO - i < 10 ? " |" : "|");
+            for (int j = 0; j < TAM_TABLERO; ++j) {
+                cout << tablero[i][j] << " ";
+            }
+            cout << "|" << endl;
+        }
+        cout << "  ---------------------" << endl;
+        cout << "   A B C D E F G H I J" << endl;
+        cout << "Turno de: " << (jugador_actual == JUGADOR_B ? "Blancas (B/X)" : "Negras (N/Y)") << endl;
+    }
 
     vector<string> generarMovimientos(char jugador, bool solo_capturas) {
         vector<string> movimientos;
@@ -127,18 +145,13 @@ public:
         return generarMovimientos(jugador_actual, false);
     }
     
-    // --> FUNCIÓN "TRADUCTORA" QUE DEBE ESTAR EN LA CLASE
     string getMovimientosLegalesComoString() {
         vector<string> movimientos = getMovimientosLegales();
-        if (movimientos.empty()) {
-            return "";
-        }
+        if (movimientos.empty()) return "";
         string resultado = "";
         for (size_t i = 0; i < movimientos.size(); ++i) {
             resultado += movimientos[i];
-            if (i < movimientos.size() - 1) {
-                resultado += "|";
-            }
+            if (i < movimientos.size() - 1) resultado += "|";
         }
         return resultado;
     }
@@ -155,7 +168,7 @@ public:
         int y2 = toupper(destino_str[0]) - 'A';
         int x2 = TAM_TABLERO - stoi(destino_str.substr(1));
         char pieza = tablero[x1][y1];
-        if (pieza == VACIO) return false; // Evita mover una pieza vacía
+        if (pieza == VACIO) return false;
         tablero[x2][y2] = pieza;
         tablero[x1][y1] = VACIO;
         if (abs(x2 - x1) == 2) { 
@@ -232,49 +245,53 @@ extern "C" {
     int get_thread_count(JuegoDamas* juego) {
         return juego->getHilosUsados();
     }
-    
-    // --> FUNCIÓN "MENSAJERO" QUE DEBE ESTAR AQUÍ
     const char* get_movimientos_legales_str(JuegoDamas* juego) {
         static string movs_str;
         movs_str = juego->getMovimientosLegalesComoString();
         return movs_str.c_str();
     }
 }
-// El main() para pruebas es opcional
-
+// ==============================================================================
+// FUNCIÓN MAIN PARA PRUEBAS EN CONSOLA
+// ¡RECUERDA COMENTAR O ELIMINAR ESTE BLOQUE ANTES DE COMPILAR A WEBASSEMBLY!
+// ==============================================================================
 int main() {
     JuegoDamas juego;
     string mov_humano;
 
+    // Bucle principal del juego
     while (true) {
-        juego.imprimirTablero();
+        juego.imprimirTablero(); // Muestra el estado actual del tablero
+
+        // Obtiene los movimientos legales para el jugador actual
         vector<string> movimientos = juego.getMovimientosLegales();
 
+        // Comprueba si hay fin de juego (un jugador no tiene movimientos)
         if (movimientos.empty()) {
-            cout << "Juego terminado. El jugador " << juego.getJugadorActual() << " no tiene movimientos." << endl;
-            break;
+            cout << "\n===================================" << endl;
+            cout << "JUEGO TERMINADO." << endl;
+            // Determina el ganador
+            if (juego.getJugadorActual() == JUGADOR_B) {
+                cout << "¡Ganan las Negras! Las Blancas no tienen movimientos." << endl;
+            } else {
+                cout << "¡Ganan las Blancas! Las Negras no tienen movimientos." << endl;
+            }
+            cout << "===================================" << endl;
+            break; // Rompe el bucle principal
         }
 
         string mov_elegido;
+        // Turno del Jugador Humano (Blancas)
         if (juego.getJugadorActual() == JUGADOR_B) {
-            cout << "Tu movimiento (ej: D6 E5): ";
-            getline(cin, mov_humano);
+            
+            // Bucle para validar la entrada del humano
+            while(true) {
+                cout << "\nTu turno. Introduce el movimiento (ej: C3 D4): ";
+                getline(cin, mov_humano);
 
-            if (find(movimientos.begin(), movimientos.end(), mov_humano) != movimientos.end()) {
-                mov_elegido = mov_humano;
-            } else {
-                cout << "Movimiento ilegal. Intenta de nuevo." << endl;
-                continue;
-            }
-
-        } else { 
-            cout << "Turno de la IA (Negras)..." << endl;
-            mov_elegido = juego.getMovimientoAI();
-            cout << "La IA mueve: " << mov_elegido << endl;
-        }
-
-        juego.realizarMovimiento(mov_elegido);
-    }
-
-    return 0;
-}
+                // Comprueba si el movimiento introducido está en la lista de movimientos legales
+                if (find(movimientos.begin(), movimientos.end(), mov_humano) != movimientos.end()) {
+                    mov_elegido = mov_humano;
+                    break; // El movimiento es válido, salimos del bucle de validación
+                } else {
+                    cout << "--> Movimiento '" << mov_humano << "' no es legal. Inténtalo de nuevo."
