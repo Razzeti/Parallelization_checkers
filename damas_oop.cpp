@@ -294,4 +294,21 @@ int main() {
                     mov_elegido = mov_humano;
                     break; // El movimiento es válido, salimos del bucle de validación
                 } else {
-                    cout << "--> Movimiento '" << mov_humano << "' no es legal. Inténtalo de nuevo."
+                    cout << "--> Movimiento '" << mov_humano << "' no es legal. Inténtalo de nuevo." << endl;
+                }
+            }
+        
+        } 
+        // Turno de la IA (Negras)
+        else { 
+            cout << "\nTurno de la IA (Negras)..." << endl;
+            mov_elegido = juego.getMovimientoAI();
+            cout << "La IA mueve: " << mov_elegido << endl;
+        }
+        
+        // Realiza el movimiento elegido (sea del humano o de la IA)
+        juego.realizarMovimiento(mov_elegido);
+    }
+
+    return 0;
+}
