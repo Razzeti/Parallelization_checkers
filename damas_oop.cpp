@@ -5,7 +5,8 @@
 #include <algorithm>
 #include <cctype>   
 #include <chrono>   
-// #include <omp.h>
+#include <omp.h>
+#include <iomanip>
 
 using namespace std;
 
@@ -23,7 +24,8 @@ private:
     vector<vector<char>> tablero;
     int movimientos_sin_captura;
     char jugador_actual;
-    long long ultimo_tiempo_ia_ns;
+    long long tiempo_ia_secuencial_ns;
+    long long tiempo_ia_paralelo_ns;
     int hilos_usados;
 
     int evaluarPosicion() {
@@ -41,15 +43,49 @@ private:
         return puntuacion;
     }
 
+    int minimax(int profundidad, bool esTurnoMaximizador) {
+        // Caso Base: Si llegamos al final de la búsqueda o no hay movimientos
+        if (profundidad == 0) {
+            return evaluarPosicion();
+        }
+
+        vector<string> movimientos = getMovimientosLegales();
+        if (movimientos.empty()) {
+            return evaluarPosicion();
+        }
+
+        if (esTurnoMaximizador) { // Turno de MAX (Nuestra IA)
+            int mejorPuntuacion = -99999;
+            for (const string& mov : movimientos) {
+                JuegoDamas copia_juego = *this;
+                copia_juego.realizarMovimiento(mov);
+                int puntuacion = copia_juego.minimax(profundidad - 1, false); // El siguiente turno es del oponente (MIN)
+                mejorPuntuacion = max(mejorPuntuacion, puntuacion);
+            }
+            return mejorPuntuacion;
+        } else { // Turno de MIN (El Oponente)
+            int peorPuntuacion = 99999;
+            for (const string& mov : movimientos) {
+                JuegoDamas copia_juego = *this;
+                copia_juego.realizarMovimiento(mov);
+                int puntuacion = copia_juego.minimax(profundidad - 1, true); // El siguiente turno es nuestro (MAX)
+                peorPuntuacion = min(peorPuntuacion, puntuacion);
+            }
+            return peorPuntuacion;
+        }
+    }
 public:
     JuegoDamas() {
         tablero.resize(TAM_TABLERO, vector<char>(TAM_TABLERO, VACIO));
         inicializarTablero();
         movimientos_sin_captura = 0;
         jugador_actual = JUGADOR_B;
-        ultimo_tiempo_ia_ns = 0;
+        tiempo_ia_secuencial_ns = 0;
+        tiempo_ia_paralelo_ns = 0;
         hilos_usados = 1; 
     }
+
+
 
     void inicializarTablero() {
          for (int i = 0; i < TAM_TABLERO; i++) {
@@ -181,40 +217,104 @@ public:
         return true;
     }
 
-    string getMovimientoAI() {
+    // --> MÉTODO DE IA #1: SECUENCIAL
+    // Lógica con un bucle simple.
+    string getMovimientoAI_Secuencial(int profundidad) {
         auto inicio = chrono::high_resolution_clock::now();
         vector<string> movimientos = getMovimientosLegales();
         if (movimientos.empty()) {
-            this->ultimo_tiempo_ia_ns = 0;
-            this->hilos_usados = 1;
+            this->tiempo_ia_secuencial_ns = 0;
             return "";
         }
         string mejor_movimiento = movimientos[0];
         int mejor_puntuacion = (jugador_actual == JUGADOR_B) ? -99999 : 99999;
+
         for (const string& mov : movimientos) {
             JuegoDamas copia_juego = *this;
+
             copia_juego.realizarMovimiento(mov);
-            int puntuacion_actual = copia_juego.evaluarPosicion();
+            int puntuacion_movimiento = copia_juego.minimax(profundidad - 1, false);
+
             if (jugador_actual == JUGADOR_B) {
-                if (puntuacion_actual > mejor_puntuacion) {
-                    mejor_puntuacion = puntuacion_actual;
+                if (puntuacion_movimiento > mejor_puntuacion) {
+                    mejor_puntuacion = puntuacion_movimiento;
                     mejor_movimiento = mov;
                 }
             } else {
-                if (puntuacion_actual < mejor_puntuacion) {
-                    mejor_puntuacion = puntuacion_actual;
+                if (puntuacion_movimiento < mejor_puntuacion) {
+                    mejor_puntuacion = puntuacion_movimiento;
                     mejor_movimiento = mov;
                 }
             }
         }
+
         auto fin = chrono::high_resolution_clock::now();
-        auto duracion_ns = chrono::duration_cast<chrono::nanoseconds>(fin - inicio);
-        this->ultimo_tiempo_ia_ns = duracion_ns.count();
-        this->hilos_usados = 1;
+        this->tiempo_ia_secuencial_ns = chrono::duration_cast<chrono::nanoseconds>(fin - inicio).count();
         return mejor_movimiento;
     }
+
+    // --> MÉTODO DE IA #2: PARALELO
+    // La misma lógica, pero usando OpenMP.
+    string getMovimientoAI_Paralelo(int profundidad) {
+        auto inicio = chrono::high_resolution_clock::now();
+        vector<string> movimientos = getMovimientosLegales();
+        if (movimientos.empty()) {
+            this->tiempo_ia_paralelo_ns = 0;
+            this->hilos_usados = 1;
+            return "";
+        }
+        string mejor_movimiento_global = movimientos[0];
+        int mejor_puntuacion_global = (jugador_actual == JUGADOR_B) ? -99999 : 99999;
+
+        #pragma omp parallel
+        {
+            string mejor_movimiento_local = mejor_movimiento_global;
+            int mejor_puntuacion_local = mejor_puntuacion_global;
+            #pragma omp for
+            for (int i = 0; i < movimientos.size(); ++i) {
+                const string& mov = movimientos[i];
+                JuegoDamas copia_juego = *this;
+                copia_juego.realizarMovimiento(mov);
+                int puntuacion_movimiento = copia_juego.minimax(profundidad - 1, false);
+
+                if (jugador_actual == JUGADOR_B) {
+                    if (puntuacion_movimiento > mejor_puntuacion_local) {
+                        mejor_puntuacion_local = puntuacion_movimiento;
+                        mejor_movimiento_local = mov;
+                    }
+                } else {
+                    if (puntuacion_movimiento < mejor_puntuacion_local) {
+                        mejor_puntuacion_local = puntuacion_movimiento;
+                        mejor_movimiento_local = mov;
+                    }
+                }
+            }
+            #pragma omp critical
+            {
+                if (jugador_actual == JUGADOR_B) {
+                    if (mejor_puntuacion_local > mejor_puntuacion_global) {
+                        mejor_puntuacion_global = mejor_puntuacion_local;
+                        mejor_movimiento_global = mejor_movimiento_local;
+                    }
+                } else {
+                    if (mejor_puntuacion_local < mejor_puntuacion_global) {
+                        mejor_puntuacion_global = mejor_puntuacion_local;
+                        mejor_movimiento_global = mejor_movimiento_local;
+                    }
+                }
+            }
+            #pragma omp single
+            {
+                this->hilos_usados = omp_get_num_threads();
+            }
+        }
+        auto fin = chrono::high_resolution_clock::now();
+        this->tiempo_ia_paralelo_ns = chrono::duration_cast<chrono::nanoseconds>(fin - inicio).count();
+        return mejor_movimiento_global;
+    }
+    long long getTiempoSecuencialNS() const { return tiempo_ia_secuencial_ns; }
+    long long getTiempoParaleloNS() const { return tiempo_ia_paralelo_ns; }
     
-    double getUltimoTiempoIANS() const { return ultimo_tiempo_ia_ns; }
     int getHilosUsados() const { return hilos_usados; }
     char getJugadorActual() const { return jugador_actual; }
 
@@ -222,51 +322,100 @@ public:
 
 // --- Interfaz para WebAssembly ---
 extern "C" {
-    JuegoDamas* crear_juego() { return new JuegoDamas(); }
-    void destruir_juego(JuegoDamas* juego) { delete juego; }
+    // --- Funciones Generales del Juego ---
+    JuegoDamas* crear_juego() { 
+        return new JuegoDamas(); 
+    }
+
+    void destruir_juego(JuegoDamas* juego) { 
+        delete juego; 
+    }
+
     const char* get_tablero(JuegoDamas* juego) {
         static string tablero_str;
         tablero_str = juego->getTableroString();
         return tablero_str.c_str();
     }
-    bool realizar_movimiento(JuegoDamas* juego, const char* mov) {
-        return juego->realizarMovimiento(string(mov));
-    }
-    const char* get_movimiento_ia(JuegoDamas* juego) {
-        static string mov_ia;
-        mov_ia = juego->getMovimientoAI();
-        return mov_ia.c_str();
-    }
-    long long get_last_ai_ns(JuegoDamas* juego) {
-        return juego->getUltimoTiempoIANS();
-    }
-    int get_thread_count(JuegoDamas* juego) {
-        return juego->getHilosUsados();
-    }
+
+    // Devuelve una lista de movimientos legales separados por '|'
     const char* get_movimientos_legales_str(JuegoDamas* juego) {
         static string movs_str;
         movs_str = juego->getMovimientosLegalesComoString();
         return movs_str.c_str();
     }
+
+    // Realiza un movimiento en el tablero
+    bool realizar_movimiento(JuegoDamas* juego, const char* mov) {
+        return juego->realizarMovimiento(string(mov));
+    }
+
+    // --- Funciones de IA SECUENCIAL ---
+    const char* get_movimiento_ia_secuencial(JuegoDamas* juego, int profundidad) {
+        static string mov_ia;
+        mov_ia = juego->getMovimientoAI_Secuencial(profundidad);
+        return mov_ia.c_str();
+    }
+
+    long long get_last_ai_time_secuencial_ns(JuegoDamas* juego) {
+        return juego->getTiempoSecuencialNS();
+    }
+
+    // --- Funciones de IA PARALELA ---
+    const char* get_movimiento_ia_paralelo(JuegoDamas* juego,int profundidad) {
+        static string mov_ia;
+        mov_ia = juego->getMovimientoAI_Paralelo(profundidad);
+        return mov_ia.c_str();
+    }
+
+    long long get_last_ai_time_paralelo_ns(JuegoDamas* juego) {
+        return juego->getTiempoParaleloNS();
+    }
+
+    // El número de hilos solo es relevante para la versión paralela
+    int get_thread_count(JuegoDamas* juego) {
+        return juego->getHilosUsados();
+    }
 }
-// ==============================================================================
-// FUNCIÓN MAIN PARA PRUEBAS EN CONSOLA
-// ¡RECUERDA COMENTAR O ELIMINAR ESTE BLOQUE ANTES DE COMPILAR A WEBASSEMBLY!
-// ==============================================================================
-// ==============================================================================
-// FUNCIÓN MAIN PARA PRUEBAS EN CONSOLA (VERSIÓN QUE MUESTRA EL TIEMPO DE LA IA)
-// ¡RECUERDA COMENTAR O ELIMINAR ESTE BLOQUE ANTES DE COMPILAR A WEBASSEMBLY!
-// ==============================================================================
+// --- Función main() para pruebas en consola (CORREGIDA Y SINCRONIZADA) ---
 int main() {
     JuegoDamas juego;
     string mov_humano;
+    int modo_ia = 0;
+    int profundidad_busqueda = 0;
 
-    // Bucle principal del juego
+    while (modo_ia != 1 && modo_ia != 2) {
+        cout << "Elige el modo de IA para jugar:" << endl;
+        cout << "1. IA SECUENCIAL" << endl;
+        cout << "2. IA PARALELA" << endl;
+        cout << "Tu elección (1 o 2): ";
+        cin >> modo_ia;
+        if (cin.fail() || (modo_ia != 1 && modo_ia != 2)) {
+            cout << "Opción inválida." << endl;
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            modo_ia = 0;
+        }
+    }
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+    while (profundidad_busqueda <= 0) {
+        cout << "\nIntroduce la profundidad de búsqueda de la IA (ej: 2, 3, 4...): ";
+        cout << "\n(Advertencia: Profundidades > 4 pueden ser MUY lentas)" << endl;
+        cout << "Profundidad: ";
+        cin >> profundidad_busqueda;
+        if (cin.fail() || profundidad_busqueda <= 0) {
+            cout << "Entrada inválida. Introduce un número entero positivo." << endl;
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            profundidad_busqueda = 0;
+        }
+    }
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    cout << "\nHas elegido la IA " << (modo_ia == 1 ? "SECUENCIAL" : "PARALELA") << " con profundidad " << profundidad_busqueda << ". ¡Que empiece el juego!" << endl;
+    
     while (true) {
-        juego.imprimirTablero(); // Muestra el estado actual del tablero
-
+        juego.imprimirTablero();
         vector<string> movimientos = juego.getMovimientosLegales();
-
         if (movimientos.empty()) {
             cout << "\n===================================" << endl;
             cout << "JUEGO TERMINADO." << endl;
@@ -280,41 +429,49 @@ int main() {
         }
 
         string mov_elegido;
-        // Turno del Jugador Humano (Blancas)
         if (juego.getJugadorActual() == JUGADOR_B) {
-            
             while(true) {
                 cout << "\nTu turno. Introduce el movimiento (ej: C3 D4): ";
                 getline(cin, mov_humano);
-
                 if (find(movimientos.begin(), movimientos.end(), mov_humano) != movimientos.end()) {
                     mov_elegido = mov_humano;
-                    break;
+                    break; 
                 } else {
                     cout << "--> Movimiento '" << mov_humano << "' no es legal. Inténtalo de nuevo." << endl;
                 }
             }
-        
-        } 
-        // Turno de la IA (Negras)
-        else { 
-            cout << "\nTurno de la IA (Negras)... pensando..." << endl;
+        } else { 
+            cout << "\nTurno de la IA (Negras)... pensando con profundidad " << profundidad_busqueda << "..." << endl;
             
-            // La IA decide su movimiento. El tiempo se calcula y guarda internamente.
-            mov_elegido = juego.getMovimientoAI();
-            
-            // ==========================================================
-            // ¡NUEVO! Obtenemos y mostramos el tiempo de respuesta.
-            // ==========================================================
-            long long tiempo_ns = juego.getUltimoTiempoIANS(); // Usamos la función de nanosegundos
-            cout << "La IA mueve: " << mov_elegido << endl;
-            cout << "Tiempo de respuesta de la IA: " << tiempo_ns << " ns (" << (double)tiempo_ns / 1000000.0 << " ms)" << endl;
-            
+            if (modo_ia == 1) {
+                mov_elegido = juego.getMovimientoAI_Secuencial(profundidad_busqueda);
+                juego.getMovimientoAI_Paralelo(profundidad_busqueda);
+            } else {
+                mov_elegido = juego.getMovimientoAI_Paralelo(profundidad_busqueda);
+                juego.getMovimientoAI_Secuencial(profundidad_busqueda);
+            }
+
+            long long tiempo_s = juego.getTiempoSecuencialNS();
+            long long tiempo_p = juego.getTiempoParaleloNS();
+            int hilos = juego.getHilosUsados();
+
+            cout << "La IA (" << (modo_ia == 1 ? "SECUENCIAL" : "PARALELA") << ") mueve: " << mov_elegido << endl;
+            cout << "--- Benchmark del Turno ---" << endl;
+            cout << "Tiempo Secuencial: " << (double)tiempo_s / 1000000.0 << " ms" << endl;
+            cout << "Tiempo Paralelo  : " << (double)tiempo_p / 1000000.0 << " ms (usando " << hilos << " hilos)" << endl;
+            if (tiempo_s > 0 && tiempo_p > 0) {
+                if (tiempo_p < tiempo_s) {
+                    double speedup = (double)tiempo_s / tiempo_p;
+                    cout << "Speedup Paralelo: " << fixed << setprecision(2) << speedup << "x más rápido" << endl;
+                } else {
+                    double slowdown = (double)tiempo_p / tiempo_s;
+                    cout << "Speedup Paralelo: " << fixed << setprecision(2) << slowdown << "x más lento" << endl;
+                }
+            }
+            cout << "---------------------------" << endl;
         }
         
-        // Se realiza el movimiento en el tablero.
         juego.realizarMovimiento(mov_elegido);
     }
-
     return 0;
 }
