@@ -214,7 +214,7 @@ public:
         return mejor_movimiento;
     }
     
-    double getUltimoTiempoIA() const { return ultimo_tiempo_ia_ns; }
+    double getUltimoTiempoIANS() const { return ultimo_tiempo_ia_ns; }
     int getHilosUsados() const { return hilos_usados; }
     char getJugadorActual() const { return jugador_actual; }
 
