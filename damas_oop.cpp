@@ -1,5 +1,3 @@
-%%writefile damas_oop.cpp
-
 #include <iostream>
 #include <vector>
 #include <string>
