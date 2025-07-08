@@ -1,0 +1,21 @@
+### **Cómo Usarlo**
+
+El proceso de compilación es exactamente el mismo que antes:
+
+```bash
+g++ -o procesador_lotes main.cpp ParallelLZ78Compressor.cpp -std=c++17 -fopenmp
+```
+
+La diferencia está al ejecutar el programa `./procesador_lotes`. Ahora te aparecerá un menú:
+
+```
+Seleccione una opción para la ruta de los archivos:
+1. Usar ruta predefinida (LZ78/textos/)
+2. Especificar una ruta manualmente
+Su elección (1 o 2):
+```
+
+* Si escribes `1` y presionas Enter, el programa usará automáticamente la carpeta `LZ78/textos/` y comenzará el análisis.
+* Si escribes `2` y presionas Enter, te pedirá que escribas la ruta manualmente, como lo hacía antes.
+
+Esta modificación hace que tus pruebas sean mucho más ágil
