@@ -1,0 +1,103 @@
+body { 
+    font-family: sans-serif; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    min-height: 100vh;
+    margin: 0;
+    /* CAMBIO: Fondo negro */
+    background-color: #121212; 
+    color: #e0e0e0;
+}
+/*Estadisticas*/
+#gameContainer {
+    display: flex;
+    align-items: flex-start;
+    gap: 30px;
+}
+#board { 
+    display: grid; 
+    grid-template-columns: repeat(10, 50px); 
+    grid-template-rows: repeat(10, 50px); 
+    border: 2px solid #444; 
+}
+
+#board { 
+    display: grid; 
+    grid-template-columns: repeat(10, 50px); 
+    grid-template-rows: repeat(10, 50px); 
+    border: 2px solid #555; 
+}
+.square { 
+    width: 50px; 
+    height: 50px; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    font-size: 36px; 
+    cursor: pointer;
+}
+.dark { background-color: #769656; }
+.light { background-color: #eeeed2; }
+.selected { 
+    border: 3px solid #00aaff; 
+    box-sizing: border-box; 
+    background-color: #b4d36c;
+}
+#status { 
+    margin-top: 15px; 
+    font-size: 1.2em; 
+    font-weight: bold; 
+    min-height: 1.5em;
+}
+button { 
+    margin-top: 10px; 
+    padding: 10px 15px; 
+    font-size: 1em; 
+    cursor: pointer; 
+    border-radius: 5px;
+    border: none;
+    background-color: #555;
+    color: #fff;
+}
+button:disabled {
+    background-color: #333;
+    cursor: not-allowed;
+}
+.pieza {
+    width: 90%; /* Ocupa el 90% del tamaño de la casilla */
+    height: 90%;
+    background-size: contain; /* Asegura que la imagen quepa completa */
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+/* Asignamos la imagen a cada clase */
+.pieza.blanca { background-image: url('imagenes/pieza-blanca.svg'); }
+.pieza.negra  { background-image: url('imagenes/pieza-negra.svg'); }
+.pieza.reina-blanca { background-image: url('imagenes/reina-blanca.svg'); }
+.pieza.reina-negra  { background-image: url('imagenes/reina-negra.svg'); }
+
+#statsBar {
+    width: 250px;
+    padding: 20px;
+    background-color: #1e1e1e;
+    border: 1px solid #444;
+    border-radius: 8px;
+}
+#statsBar h2 {
+    margin-top: 0;
+    border-bottom: 2px solid #00aaff;
+    padding-bottom: 10px;
+    text-align: center;
+}
+.stat-item {
+    margin-bottom: 15px;
+    font-size: 1.1em;
+}
+.stat-item strong {
+    color: #00aaff;
+}
+#status { 
+    font-weight: bold; 
+}
